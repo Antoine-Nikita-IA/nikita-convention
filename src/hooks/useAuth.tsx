@@ -14,10 +14,12 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
+const DEFAULT_ORGANISME_ID = 'a0000000-0000-0000-0000-000000000001';
+
 const MOCK_USER: UserProfile = {
   id: 'u-001',
   user_id: 'auth-001',
-  organisme_id: 'org-001',
+  organisme_id: DEFAULT_ORGANISME_ID,
   email: 'antoine@agencenikita.com',
   first_name: 'Antoine',
   last_name: 'Admin',
@@ -70,12 +72,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .single();
 
       if (error || !data) {
-        // User authenticated but no profile yet — create a basic one
+        // User authenticated but no profile yet — build from auth metadata
         const supaUser = (await supabase.auth.getUser()).data.user;
         const profile: UserProfile = {
           id: userId,
           user_id: userId,
-          organisme_id: 'org-001', // Default organisme
+          organisme_id: DEFAULT_ORGANISME_ID,
           email: supaUser?.email || '',
           first_name: supaUser?.user_metadata?.first_name || 'Admin',
           last_name: supaUser?.user_metadata?.last_name || '',
@@ -87,10 +89,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser({
           id: data.id,
           user_id: data.user_id || userId,
-          organisme_id: data.organisme_id,
+          organisme_id: data.organisme_id || DEFAULT_ORGANISME_ID,
           email: data.email,
-          first_name: data.first_name || data.full_name?.split(' ')[0] || '',
-          last_name: data.last_name || data.full_name?.split(' ').slice(1).join(' ') || '',
+          first_name: data.first_name || '',
+          last_name: data.last_name || '',
           role: data.role || 'user',
           is_active: data.is_active ?? true,
         });
