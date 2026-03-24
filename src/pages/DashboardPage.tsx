@@ -1,14 +1,24 @@
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, KPICard } from '@/components/ui/Card';
 import { StatusBadge } from '@/components/ui/Badge';
 import { formatDate, formatMoney, getClientFromSession } from '@/lib/utils';
-import { mockSessions } from '@/data/mock';
-import { FolderOpen, FileCheck, PenTool, Euro, Clock, Users } from 'lucide-react';
+import { dataService } from '@/lib/services';
+import { FolderOpen, FileCheck, PenTool, Euro, Clock, Users, Loader2 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import type { Session } from '@/types/database';
 
 export function DashboardPage() {
   const navigate = useNavigate();
-  const sessions = mockSessions;
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    dataService.getSessions().then((data) => {
+      setSessions(data);
+      setLoading(false);
+    }).catch(() => setLoading(false));
+  }, []);
 
   const totalSessions = sessions.length;
   const enAttente = sessions.filter((s) => s.status === 'en_attente').length;
@@ -23,6 +33,14 @@ export function DashboardPage() {
     caParMois[month] = (caParMois[month] || 0) + (s.montant_ht || 0);
   });
   const chartData = Object.entries(caParMois).map(([mois, ca]) => ({ mois, ca }));
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="animate-spin text-nikita-pink" size={32} />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -56,33 +74,37 @@ export function DashboardPage() {
         <div className="px-6 py-4 border-b border-gray-100">
           <h2 className="text-sm font-semibold text-gray-700">Dernières sessions</h2>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-gray-50">
-                <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Formation</th>
-                <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Client</th>
-                <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Statut</th>
-                <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Montant HT</th>
-                <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Date</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {sessions.slice(0, 10).map((session) => {
-                const client = getClientFromSession(session);
-                return (
-                  <tr key={session.id} className="hover:bg-gray-50 cursor-pointer transition-colors" onClick={() => navigate(`/sessions/${session.id}`)}>
-                    <td className="px-6 py-3 font-medium text-gray-800">{session.formation?.intitule || '—'}</td>
-                    <td className="px-6 py-3 text-gray-600">{client?.raison_sociale || '—'}</td>
-                    <td className="px-6 py-3"><StatusBadge status={session.status} /></td>
-                    <td className="px-6 py-3 text-gray-600">{formatMoney(session.montant_ht)}</td>
-                    <td className="px-6 py-3 text-gray-500 text-xs">{formatDate(session.created_at)}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        {sessions.length === 0 ? (
+          <div className="px-6 py-12 text-center text-gray-400 text-sm">Aucune session pour le moment. Créez votre première session.</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-gray-50">
+                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Formation</th>
+                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Client</th>
+                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Statut</th>
+                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Montant HT</th>
+                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Date</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {sessions.slice(0, 10).map((session) => {
+                  const client = getClientFromSession(session);
+                  return (
+                    <tr key={session.id} className="hover:bg-gray-50 cursor-pointer transition-colors" onClick={() => navigate(`/sessions/${session.id}`)}>
+                      <td className="px-6 py-3 font-medium text-gray-800">{session.formation?.intitule || '—'}</td>
+                      <td className="px-6 py-3 text-gray-600">{client?.raison_sociale || '—'}</td>
+                      <td className="px-6 py-3"><StatusBadge status={session.status} /></td>
+                      <td className="px-6 py-3 text-gray-600">{formatMoney(session.montant_ht)}</td>
+                      <td className="px-6 py-3 text-gray-500 text-xs">{formatDate(session.created_at)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </Card>
     </div>
   );

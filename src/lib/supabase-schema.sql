@@ -7,7 +7,7 @@
 -- ============================================================================
 
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-CREATE EXTENSION IF NOT EXISTS "pgtrgm";
+CREATE EXTENSION IF NOT EXISTS "pg_trgm";
 
 -- Status enums for sessions - matched to TypeScript SessionStatus
 CREATE TYPE session_status AS ENUM (

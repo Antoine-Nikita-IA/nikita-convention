@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Card } from '@/components/ui/Card';
@@ -8,28 +8,35 @@ import { Input, SelectField } from '@/components/ui/Input';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Modal } from '@/components/ui/Modal';
 import { formatMoney, getClientFromSession, cn } from '@/lib/utils';
-import { mockSessions, mockFormations } from '@/data/mock';
 import { dataService } from '@/lib/services';
 import { STATUS_LABELS } from '@/types/database';
-import type { SessionStatus } from '@/types/database';
-import { Search, Plus, FileText } from 'lucide-react';
+import type { Session, SessionStatus, Formation } from '@/types/database';
+import { Search, Plus, FileText, Loader2 } from 'lucide-react';
 
 const FILTER_OPTIONS: (SessionStatus | 'all')[] = ['all', 'en_attente', 'formulaire_recu', 'valide', 'convention_generee', 'envoye', 'signe', 'annule'];
 
 export function SessionsPage() {
   const [filter, setFilter] = useState<SessionStatus | 'all'>('all');
   const [search, setSearch] = useState('');
-  const [sessions, setSessions] = useState(mockSessions);
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const [formations, setFormations] = useState<Formation[]>([]);
+  const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [creating, setCreating] = useState(false);
   const navigate = useNavigate();
 
-  // New session form state
   const [newFormationId, setNewFormationId] = useState('');
   const [newDates, setNewDates] = useState('');
   const [newVille, setNewVille] = useState('');
   const [newLieu, setNewLieu] = useState('');
   const [newFormateurs, setNewFormateurs] = useState('');
+
+  useEffect(() => {
+    Promise.all([dataService.getSessions(), dataService.getFormations()])
+      .then(([s, f]) => { setSessions(s); setFormations(f); })
+      .catch(() => toast.error('Erreur de chargement'))
+      .finally(() => setLoading(false));
+  }, []);
 
   const filtered = useMemo(() => {
     let result = [...sessions];
@@ -47,25 +54,30 @@ export function SessionsPage() {
   async function handleCreate() {
     if (!newFormationId) { toast.error('Sélectionnez une formation'); return; }
     setCreating(true);
-    const formation = mockFormations.find(f => f.id === newFormationId);
-    const session = await dataService.createSession({
-      formation_id: newFormationId,
-      dates_formation: newDates || null,
-      ville: newVille || null,
-      lieu: newLieu || null,
-      formateurs: newFormateurs,
-      montant_ht: formation?.tarif_ht || null,
-    });
-    setSessions([session, ...sessions]);
-    setCreating(false);
-    setShowCreateModal(false);
-    setNewFormationId('');
-    setNewDates('');
-    setNewVille('');
-    setNewLieu('');
-    setNewFormateurs('');
-    toast.success('Session créée avec succès');
-    navigate(`/sessions/${session.id}`);
+    try {
+      const formation = formations.find(f => f.id === newFormationId);
+      const session = await dataService.createSession({
+        formation_id: newFormationId,
+        dates_formation: newDates || null,
+        ville: newVille || null,
+        lieu: newLieu || null,
+        formateurs: newFormateurs,
+        montant_ht: formation?.tarif_ht || null,
+      });
+      setSessions([session, ...sessions]);
+      setShowCreateModal(false);
+      setNewFormationId(''); setNewDates(''); setNewVille(''); setNewLieu(''); setNewFormateurs('');
+      toast.success('Session créée avec succès');
+      navigate(`/sessions/${session.id}`);
+    } catch {
+      toast.error('Erreur lors de la création');
+    } finally {
+      setCreating(false);
+    }
+  }
+
+  if (loading) {
+    return <div className="flex items-center justify-center h-64"><Loader2 className="animate-spin text-nikita-pink" size={32} /></div>;
   }
 
   return (
@@ -120,13 +132,12 @@ export function SessionsPage() {
         )}
       </Card>
 
-      {/* Modal nouvelle session */}
       <Modal open={showCreateModal} onClose={() => setShowCreateModal(false)} title="Nouvelle session" size="lg"
         footer={<><Button variant="outline" onClick={() => setShowCreateModal(false)}>Annuler</Button><Button onClick={handleCreate} loading={creating}>Créer la session</Button></>}
       >
         <div className="space-y-4">
           <SelectField label="Formation" value={newFormationId} onChange={(e) => setNewFormationId(e.target.value)}
-            options={mockFormations.filter(f => f.actif).map(f => ({ value: f.id, label: `${f.intitule} (${f.duree_heures}h — ${new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', minimumFractionDigits: 0 }).format(f.tarif_ht)} HT)` }))} />
+            options={formations.filter(f => f.actif).map(f => ({ value: f.id, label: `${f.intitule} (${f.duree_heures}h — ${new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', minimumFractionDigits: 0 }).format(f.tarif_ht)} HT)` }))} />
           <Input label="Dates de formation" value={newDates} onChange={(e) => setNewDates(e.target.value)} placeholder="Ex: 15-16 avril 2026" />
           <div className="grid grid-cols-2 gap-4">
             <Input label="Ville" value={newVille} onChange={(e) => setNewVille(e.target.value)} placeholder="Lyon" />
