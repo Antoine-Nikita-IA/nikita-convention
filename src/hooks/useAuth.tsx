@@ -123,13 +123,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      setLoading(true);
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
         console.error('Login error:', error.message);
+        setLoading(false);
         return false;
+      }
+      // Load profile immediately so user is set before navigate()
+      if (data.user) {
+        setSupabaseUser(data.user);
+        await loadUserProfile(data.user.id);
       }
       return true;
     } catch {
+      setLoading(false);
       return false;
     }
   }, []);
