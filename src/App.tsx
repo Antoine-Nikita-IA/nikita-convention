@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import { AuthProvider, useAuth } from '@/hooks/useAuth';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { ThemeProvider } from '@/hooks/useTheme';
 import { Layout } from '@/components/Layout';
 import { LoginPage } from '@/pages/LoginPage';
 import { RegisterPage } from '@/pages/RegisterPage';
@@ -17,6 +18,7 @@ import { InscriptionPage } from '@/pages/InscriptionPage';
 import { ConventionClientPage } from '@/pages/ConventionClientPage';
 import { SuiviClientPage } from '@/pages/SuiviClientPage';
 import { DemandeFormationPage } from '@/pages/DemandeFormationPage';
+import { ProfilePage } from '@/pages/ProfilePage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading, logout } = useAuth();
@@ -58,6 +60,7 @@ function SmartDashboard() {
 export default function App() {
   return (
     <ErrorBoundary>
+      <ThemeProvider>
       <BrowserRouter>
         <AuthProvider>
           <Toaster position="top-right" richColors />
@@ -78,6 +81,7 @@ export default function App() {
               <Route path="/formations" element={<AdminRoute><FormationsPage /></AdminRoute>} />
               <Route path="/clients" element={<ClientsPage />} />
               <Route path="/utilisateurs" element={<AdminRoute><UsersPage /></AdminRoute>} />
+              <Route path="/profil" element={<ProfilePage />} />
               <Route path="/settings" element={<AdminRoute><SettingsPage /></AdminRoute>} />
             </Route>
 
@@ -85,6 +89,7 @@ export default function App() {
           </Routes>
         </AuthProvider>
       </BrowserRouter>
+      </ThemeProvider>
     </ErrorBoundary>
   );
 }

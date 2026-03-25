@@ -2,9 +2,10 @@ import { useState, useEffect, useMemo } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
-import { LayoutDashboard, FileText, GraduationCap, Users, Settings, Menu, X, LogOut, UserCog } from 'lucide-react';
+import { LayoutDashboard, FileText, GraduationCap, Users, Settings, Menu, X, LogOut, UserCog, Moon, Sun } from 'lucide-react';
 import { ROLE_LABELS } from '@/types/database';
 import { dataService } from '@/lib/services';
+import { useTheme } from '@/hooks/useTheme';
 
 interface NavItem {
   to: string;
@@ -27,6 +28,7 @@ export function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const { theme, toggleTheme } = useTheme();
   const [pendingUsersCount, setPendingUsersCount] = useState(0);
 
   const navItems = useMemo(() => {
@@ -85,17 +87,23 @@ export function Layout() {
               </NavLink>
             );
           })}
+          <div className="pt-4 mt-4 border-t border-white/10">
+            <button onClick={toggleTheme} className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-white/5 transition-colors w-full">
+              {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+              <span>{theme === 'dark' ? 'Mode clair' : 'Mode sombre'}</span>
+            </button>
+          </div>
         </nav>
 
         <div className="p-4 border-t border-white/10">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-nikita-pink/30 flex items-center justify-center text-xs font-medium">
+            <button onClick={() => { navigate('/profil'); setSidebarOpen(false); }} className="w-8 h-8 rounded-full bg-nikita-pink/30 flex items-center justify-center text-xs font-medium hover:bg-nikita-pink/50 transition-colors" title="Mon profil">
               {user?.first_name?.[0]}{user?.last_name?.[0]}
-            </div>
-            <div className="flex-1 min-w-0">
+            </button>
+            <button onClick={() => { navigate('/profil'); setSidebarOpen(false); }} className="flex-1 min-w-0 text-left hover:opacity-80 transition-opacity" title="Mon profil">
               <div className="text-sm font-medium truncate">{user?.first_name} {user?.last_name}</div>
               <div className="text-[10px] text-gray-400 truncate">{user?.role ? ROLE_LABELS[user.role] : user?.email}</div>
-            </div>
+            </button>
             <button onClick={handleLogout} className="p-1.5 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white transition-colors" title="Déconnexion">
               <LogOut size={16} />
             </button>
@@ -104,7 +112,7 @@ export function Layout() {
       </aside>
 
       <main className="flex-1 min-h-screen">
-        <div className="lg:hidden flex items-center justify-between px-4 py-3 bg-white border-b border-gray-200">
+        <div className="lg:hidden flex items-center justify-between px-4 py-3 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
           <button onClick={() => setSidebarOpen(true)} className="p-2 rounded-lg hover:bg-gray-100"><Menu size={20} /></button>
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 bg-nikita-pink rounded-lg flex items-center justify-center font-bold text-white text-sm">N</div>

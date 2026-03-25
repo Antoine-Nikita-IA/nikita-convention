@@ -10,8 +10,9 @@ import { Input } from '@/components/ui/Input';
 import { EmailPreview } from '@/components/EmailPreview';
 import { formatDate, formatMoney } from '@/lib/utils';
 import { dataService } from '@/lib/services';
+import { generateConventionPDF } from '@/lib/pdf-convention';
 import { getNextStatuses, STATUS_LABELS } from '@/types/database';
-import type { Session, SessionStatus, EmailLog, Stagiaire, Client, Organisme } from '@/types/database';
+import type { Session, SessionStatus, EmailLog, Stagiaire, Client, Organisme, Convention } from '@/types/database';
 import {
   ArrowLeft, Send, RefreshCw, FileDown, UserPlus, CheckCircle, XCircle,
   AlertCircle, Link2, Copy, Eye, Trash2, ExternalLink, Clock, History, Loader2,
@@ -28,6 +29,7 @@ export function SessionDetailPage() {
   const [session, setSession] = useState<Session | null>(null);
   const [client, setClient] = useState<Client | null>(null);
   const [organisme, setOrganisme] = useState<Organisme | null>(null);
+  const [convention, setConvention] = useState<Convention | null>(null);
   const [emailLogs, setEmailLogs] = useState<EmailLog[]>([]);
   const [stagiaires, setStagiaires] = useState<Stagiaire[]>([]);
   const [loading, setLoading] = useState(true);
@@ -73,14 +75,16 @@ export function SessionDetailPage() {
         montant_ht: String(sess.montant_ht || ''),
       });
 
-      const [cl, emails, stag] = await Promise.all([
+      const [cl, emails, stag, conv] = await Promise.all([
         dataService.getClientBySessionId(id),
         dataService.getEmailLogsBySessionId(id),
         dataService.getStagiairesBySessionId(id),
+        dataService.getConventionBySessionId(id),
       ]);
       setClient(cl);
       setEmailLogs(emails);
       setStagiaires(stag);
+      setConvention(conv);
     } catch {
       toast.error('Erreur de chargement');
     } finally {
@@ -429,6 +433,14 @@ export function SessionDetailPage() {
                 <p className="text-2xl font-bold text-nikita-pink mt-1">{formatMoney(session.montant_ttc || session.montant_ht * 1.2)}</p>
                 <p className="text-xs text-gray-500 mt-1">HT : {formatMoney(session.montant_ht)}</p>
                 {session.convention_numero && <p className="text-xs text-gray-400 mt-1 font-mono">{session.convention_numero}</p>}
+                {convention && client && organisme && !isApporteur && (
+                  <button
+                    onClick={() => generateConventionPDF(session, client, organisme, convention)}
+                    className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-nikita-pink bg-nikita-pink/10 rounded-lg hover:bg-nikita-pink/20 transition-colors"
+                  >
+                    <FileDown size={14} /> Télécharger PDF
+                  </button>
+                )}
               </div>
             </Card>
           )}

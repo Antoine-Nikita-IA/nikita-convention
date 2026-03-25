@@ -243,6 +243,16 @@ const supabaseService = {
   },
 
   // ---------- WORKFLOW: Generate convention ----------
+  async getConventionBySessionId(sessionId: string): Promise<Convention | null> {
+    const { data, error } = await supabase
+      .from('conventions')
+      .select('*')
+      .eq('session_id', sessionId)
+      .single();
+    if (error || !data) return null;
+    return data as unknown as Convention;
+  },
+
   async generateConvention(sessionId: string): Promise<{
     success: boolean;
     session?: Session;
@@ -815,6 +825,24 @@ const supabaseService = {
     return !error;
   },
 
+  async updateOwnProfile(data: { first_name: string; last_name: string }): Promise<UserProfile | null> {
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (!authUser) return null;
+    const { data: updated, error } = await supabase
+      .from('user_profiles')
+      .update({ first_name: data.first_name, last_name: data.last_name })
+      .eq('user_id', authUser.id)
+      .select()
+      .single();
+    if (error || !updated) return null;
+    return updated as unknown as UserProfile;
+  },
+
+  async changePassword(newPassword: string): Promise<boolean> {
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    return !error;
+  },
+
   async getClientsByApporteurId(apporteurId: string): Promise<Client[]> {
     const { data } = await supabase
       .from('clients')
@@ -961,6 +989,10 @@ const mockService = {
     session.updated_at = new Date().toISOString();
     return delay(session);
   },
+  async getConventionBySessionId(_sessionId: string): Promise<Convention | null> {
+    return delay(null);
+  },
+
   async generateConvention(sessionId: string): Promise<{ success: boolean; session?: Session; convention?: Convention }> {
     const session = mockSessions.find((s) => s.id === sessionId);
     if (!session || session.status !== 'valide') return delay({ success: false });
@@ -1089,6 +1121,8 @@ const mockService = {
   async updateUser(_id: string, _data: Partial<UserProfile>): Promise<UserProfile | null> { return delay(null); },
   async validateUser(_id: string, _role: UserRole): Promise<boolean> { return delay(true); },
   async deactivateUser(_id: string): Promise<boolean> { return delay(true); },
+  async updateOwnProfile(_data: { first_name: string; last_name: string }): Promise<UserProfile | null> { return delay(null); },
+  async changePassword(_newPassword: string): Promise<boolean> { return delay(true); },
   async getClientsByApporteurId(_apporteurId: string): Promise<Client[]> { return delay([]); },
   async assignClientToApporteur(_clientId: string, _apporteurId: string): Promise<boolean> { return delay(true); },
   async getSessionsByApporteurId(_apporteurId: string): Promise<Session[]> { return delay([]); },
