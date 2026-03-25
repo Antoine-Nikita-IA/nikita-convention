@@ -18,6 +18,11 @@ export const supabase = createClient(
       persistSession: true,
       detectSessionInUrl: false,
       flowType: 'implicit',
+      // Bypass navigator.locks which can deadlock on SPA init
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      lock: (async (_name: string, _acquireTimeout: number, fn: () => Promise<any>) => {
+        return await fn();
+      }) as any,
     },
   }
 );
