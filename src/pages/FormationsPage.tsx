@@ -117,7 +117,7 @@ export function FormationsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-800">Formations</h1>
+        <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Formations</h1>
         <Button icon={<Plus size={16} />} onClick={openNew}>Nouvelle formation</Button>
       </div>
       {formations.length === 0 ? (

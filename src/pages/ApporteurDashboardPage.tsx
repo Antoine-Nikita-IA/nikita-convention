@@ -50,52 +50,52 @@ export function ApporteurDashboardPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
           Bonjour, {user?.first_name} 👋
         </h1>
-        <p className="text-sm text-gray-500 mt-1">Voici le résumé de votre activité</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Voici le résumé de votre activité</p>
       </div>
 
       {/* Stats cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
           <div className="flex items-center gap-3 mb-3">
             <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
               <Building2 size={20} className="text-blue-600" />
             </div>
-            <span className="text-sm text-gray-500">Mes clients</span>
+            <span className="text-sm text-gray-500 dark:text-gray-400">Mes clients</span>
           </div>
-          <div className="text-2xl font-bold text-gray-900">{clients.length}</div>
+          <div className="text-2xl font-bold text-gray-900 dark:text-white">{clients.length}</div>
         </div>
 
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
           <div className="flex items-center gap-3 mb-3">
             <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
               <Clock size={20} className="text-orange-600" />
             </div>
-            <span className="text-sm text-gray-500">Sessions en cours</span>
+            <span className="text-sm text-gray-500 dark:text-gray-400">Sessions en cours</span>
           </div>
-          <div className="text-2xl font-bold text-gray-900">{sessionsEnCours.length}</div>
+          <div className="text-2xl font-bold text-gray-900 dark:text-white">{sessionsEnCours.length}</div>
         </div>
 
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
           <div className="flex items-center gap-3 mb-3">
             <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
               <FileText size={20} className="text-green-600" />
             </div>
-            <span className="text-sm text-gray-500">Conventions signées</span>
+            <span className="text-sm text-gray-500 dark:text-gray-400">Conventions signées</span>
           </div>
-          <div className="text-2xl font-bold text-gray-900">{sessionsSignees.length}</div>
+          <div className="text-2xl font-bold text-gray-900 dark:text-white">{sessionsSignees.length}</div>
         </div>
 
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
           <div className="flex items-center gap-3 mb-3">
             <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
               <TrendingUp size={20} className="text-purple-600" />
             </div>
-            <span className="text-sm text-gray-500">CA généré (HT)</span>
+            <span className="text-sm text-gray-500 dark:text-gray-400">CA généré (HT)</span>
           </div>
-          <div className="text-2xl font-bold text-gray-900">
+          <div className="text-2xl font-bold text-gray-900 dark:text-white">
             {caTotal.toLocaleString('fr-FR')} €
           </div>
         </div>
@@ -104,9 +104,9 @@ export function ApporteurDashboardPage() {
       {/* Two columns */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Mes clients */}
-        <div className="bg-white rounded-xl border border-gray-200">
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-            <h2 className="font-semibold text-gray-900 flex items-center gap-2">
+            <h2 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
               <Users size={18} />
               Mes clients
             </h2>
@@ -136,9 +136,9 @@ export function ApporteurDashboardPage() {
         </div>
 
         {/* Sessions en cours */}
-        <div className="bg-white rounded-xl border border-gray-200">
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-            <h2 className="font-semibold text-gray-900 flex items-center gap-2">
+            <h2 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
               <FileText size={18} />
               Sessions en cours
             </h2>
