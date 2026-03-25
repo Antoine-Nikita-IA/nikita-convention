@@ -5,7 +5,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Input, Textarea, SelectField } from '@/components/ui/Input';
 import { dataService } from '@/lib/services';
 import { formatMoney, cn } from '@/lib/utils';
-import { Plus, Clock, Euro, MapPin, Loader2, Trash2, Edit3, ToggleLeft, ToggleRight } from 'lucide-react';
+import { Plus, Clock, Euro, MapPin, Loader2, Trash2, Edit3, ToggleLeft, ToggleRight, Link2 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Formation } from '@/types/database';
 
@@ -90,6 +90,17 @@ export function FormationsPage() {
     }
   }
 
+  function handleCopyLink(f: Formation, e: React.MouseEvent) {
+    e.stopPropagation();
+    const url = `${window.location.origin}/demande/${f.id}`;
+    navigator.clipboard.writeText(url).then(() => {
+      toast.success('Lien copié dans le presse-papier');
+    }).catch(() => {
+      // Fallback : prompt
+      prompt('Copiez ce lien :', url);
+    });
+  }
+
   async function handleToggleActif(f: Formation, e: React.MouseEvent) {
     e.stopPropagation();
     const updated = await dataService.updateFormation(f.id, { actif: !f.actif });
@@ -123,6 +134,9 @@ export function FormationsPage() {
                 <div className="flex items-center gap-1 ml-2 shrink-0">
                   <button onClick={(e) => handleToggleActif(f, e)} className="p-1 rounded hover:bg-gray-100 transition-colors" title={f.actif ? 'Désactiver' : 'Activer'}>
                     {f.actif ? <ToggleRight size={16} className="text-green-600" /> : <ToggleLeft size={16} className="text-gray-400" />}
+                  </button>
+                  <button onClick={(e) => handleCopyLink(f, e)} className="p-1 rounded hover:bg-blue-50 transition-colors" title="Copier le lien d'inscription">
+                    <Link2 size={14} className="text-blue-500" />
                   </button>
                   <button onClick={() => openEdit(f)} className="p-1 rounded hover:bg-gray-100 transition-colors" title="Modifier">
                     <Edit3 size={14} className="text-gray-400" />

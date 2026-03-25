@@ -494,6 +494,85 @@ const supabaseService = {
     return { success: true, emailLog: emailLog || undefined };
   },
 
+  // ---------- DEMANDE FORMATION (public link per formation) ----------
+  async getFormationById(id: string): Promise<Formation | null> {
+    const { data, error } = await supabase
+      .from('formations')
+      .select('*')
+      .eq('id', id)
+      .single();
+    if (error || !data) return null;
+    return data as Formation;
+  },
+
+  async submitDemandeFormation(
+    formationId: string,
+    clientData: Omit<Client, 'id' | 'session_id' | 'submitted_at'>
+  ): Promise<{ success: boolean; token?: string; error?: string }> {
+    // 1. Verify formation exists and is active
+    const { data: formation } = await supabase
+      .from('formations')
+      .select('*')
+      .eq('id', formationId)
+      .eq('actif', true)
+      .single();
+    if (!formation) return { success: false, error: 'Formation introuvable ou inactive' };
+
+    // 2. Create session automatically
+    const token = `tok_${Math.random().toString(36).slice(2, 18)}`;
+    const { data: newSession, error: sessError } = await supabase
+      .from('sessions')
+      .insert({
+        formation_id: formationId,
+        token,
+        status: 'formulaire_recu',
+        horaires: '9h-17h',
+        formateurs: '',
+        user_id: formation.user_id,
+      })
+      .select()
+      .single();
+    if (sessError || !newSession) return { success: false, error: 'Erreur création session' };
+
+    // 3. Create client linked to session
+    const { error: clientError } = await supabase
+      .from('clients')
+      .insert({
+        session_id: newSession.id,
+        ...clientData,
+        submitted_at: new Date().toISOString(),
+      });
+    if (clientError) return { success: false, error: 'Erreur enregistrement client' };
+
+    // 4. Log status
+    await supabase.from('session_logs').insert({
+      session_id: newSession.id,
+      ancien_statut: 'en_attente',
+      nouveau_statut: 'formulaire_recu',
+      note: `Demande reçue via lien formation — ${(clientData as Record<string, unknown>).raison_sociale}`,
+    });
+
+    // 5. Init suivi étape 1
+    await supabase.from('suivi_etapes').insert({
+      session_id: newSession.id,
+      etape_numero: 1,
+      statut: 'complete',
+      date_realisation: new Date().toISOString(),
+      commentaire: `Formulaire reçu de ${(clientData as Record<string, unknown>).raison_sociale}`,
+    });
+
+    // 6. Email log
+    await supabase.from('email_logs').insert({
+      session_id: newSession.id,
+      type: 'confirmation_inscription',
+      destinataire: (clientData as Record<string, unknown>).email as string,
+      sujet: `Confirmation d'inscription — ${formation.intitule}`,
+      statut: 'envoye',
+    });
+
+    return { success: true, token };
+  },
+
   // ---------- FORMATIONS ----------
   async getFormations(): Promise<Formation[]> {
     const { data } = await supabase
@@ -502,11 +581,6 @@ const supabaseService = {
       .eq('actif', true)
       .order('created_at', { ascending: false });
     return data || [];
-  },
-
-  async getFormationById(id: string): Promise<Formation | null> {
-    const { data } = await supabase.from('formations').select('*').eq('id', id).single();
-    return data || null;
   },
 
   async createFormation(data: Partial<Formation>): Promise<Formation> {
@@ -1001,6 +1075,10 @@ const mockService = {
   },
   async getDocumentsByFormationId(formationId: string): Promise<DocumentFormation[]> {
     return delay(mockDocuments.filter((d) => d.formation_id === formationId || d.formation_id === null));
+  },
+  // ---------- DEMANDE FORMATION (mock) ----------
+  async submitDemandeFormation(_formationId: string, _clientData: Omit<Client, 'id' | 'session_id' | 'submitted_at'>): Promise<{ success: boolean; token?: string; error?: string }> {
+    return delay({ success: true, token: 'mock-token-123' });
   },
   // ---------- USER MANAGEMENT (mock) ----------
   async getUsers(): Promise<UserProfile[]> {

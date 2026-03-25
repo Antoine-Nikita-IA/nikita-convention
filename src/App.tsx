@@ -16,6 +16,7 @@ import { SettingsPage } from '@/pages/SettingsPage';
 import { InscriptionPage } from '@/pages/InscriptionPage';
 import { ConventionClientPage } from '@/pages/ConventionClientPage';
 import { SuiviClientPage } from '@/pages/SuiviClientPage';
+import { DemandeFormationPage } from '@/pages/DemandeFormationPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -64,6 +65,7 @@ export default function App() {
             {/* Pages publiques */}
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
+            <Route path="/demande/:formationId" element={<DemandeFormationPage />} />
             <Route path="/inscription/:token" element={<InscriptionPage />} />
             <Route path="/conventions/client/:token" element={<ConventionClientPage />} />
             <Route path="/suivi/:token" element={<SuiviClientPage />} />
