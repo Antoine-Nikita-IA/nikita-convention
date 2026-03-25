@@ -574,12 +574,10 @@ const supabaseService = {
   },
 
   // ---------- FORMATIONS ----------
-  async getFormations(): Promise<Formation[]> {
-    const { data } = await supabase
-      .from('formations')
-      .select('*')
-      .eq('actif', true)
-      .order('created_at', { ascending: false });
+  async getFormations(includeInactive = true): Promise<Formation[]> {
+    let query = supabase.from('formations').select('*');
+    if (!includeInactive) query = query.eq('actif', true);
+    const { data } = await query.order('created_at', { ascending: false });
     return data || [];
   },
 

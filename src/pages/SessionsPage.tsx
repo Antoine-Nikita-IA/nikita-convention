@@ -12,10 +12,12 @@ import { dataService } from '@/lib/services';
 import { STATUS_LABELS } from '@/types/database';
 import type { Session, SessionStatus, Formation } from '@/types/database';
 import { Search, Plus, FileText, Loader2 } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
 
 const FILTER_OPTIONS: (SessionStatus | 'all')[] = ['all', 'en_attente', 'formulaire_recu', 'valide', 'convention_generee', 'envoye', 'signe', 'annule'];
 
 export function SessionsPage() {
+  const { user } = useAuth();
   const [filter, setFilter] = useState<SessionStatus | 'all'>('all');
   const [search, setSearch] = useState('');
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -24,6 +26,7 @@ export function SessionsPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [creating, setCreating] = useState(false);
   const navigate = useNavigate();
+  const isApporteur = user?.role === 'apporteur_affaire';
 
   const [newFormationId, setNewFormationId] = useState('');
   const [newDates, setNewDates] = useState('');
@@ -32,11 +35,14 @@ export function SessionsPage() {
   const [newFormateurs, setNewFormateurs] = useState('');
 
   useEffect(() => {
-    Promise.all([dataService.getSessions(), dataService.getFormations()])
+    const sessionsFetcher = isApporteur && user?.id
+      ? dataService.getSessionsByApporteurId(user.id)
+      : dataService.getSessions();
+    Promise.all([sessionsFetcher, dataService.getFormations()])
       .then(([s, f]) => { setSessions(s); setFormations(f); })
       .catch(() => toast.error('Erreur de chargement'))
       .finally(() => setLoading(false));
-  }, []);
+  }, [user]);
 
   const filtered = useMemo(() => {
     let result = [...sessions];
@@ -84,7 +90,7 @@ export function SessionsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-800">Sessions</h1>
-        <Button icon={<Plus size={16} />} onClick={() => setShowCreateModal(true)}>Nouvelle session</Button>
+        {!isApporteur && <Button icon={<Plus size={16} />} onClick={() => setShowCreateModal(true)}>Nouvelle session</Button>}
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -109,6 +115,7 @@ export function SessionsPage() {
                   <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Formation</th>
                   <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Client</th>
                   <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Statut</th>
+                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Convention</th>
                   <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Montant HT</th>
                   <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Dates</th>
                 </tr>
@@ -121,6 +128,7 @@ export function SessionsPage() {
                       <td className="px-6 py-3 font-medium text-gray-800">{session.formation?.intitule || '—'}</td>
                       <td className="px-6 py-3 text-gray-600">{client?.raison_sociale || <span className="text-gray-400">—</span>}</td>
                       <td className="px-6 py-3"><StatusBadge status={session.status} /></td>
+                      <td className="px-6 py-3 text-gray-500 font-mono text-xs">{session.convention_numero || <span className="text-gray-300">—</span>}</td>
                       <td className="px-6 py-3 text-gray-600">{session.montant_ht ? formatMoney(session.montant_ht) : <span className="text-gray-400">—</span>}</td>
                       <td className="px-6 py-3 text-gray-500 text-xs">{session.dates_formation || <span className="text-gray-400">—</span>}</td>
                     </tr>
