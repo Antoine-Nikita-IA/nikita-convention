@@ -36,37 +36,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!isSupabaseConfigured) return;
 
-    // Get current session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        setSupabaseUser(session.user);
-        loadUserProfile(session.user.id);
-      } else {
-        setLoading(false);
-      }
-    }).catch(() => {
-      // Supabase connection failed — fall back gracefully
-      setLoading(false);
-    });
+    let mounted = true;
 
-    // Safety timeout: if auth takes more than 5s, stop loading
-    const timeout = setTimeout(() => setLoading(false), 5000);
-
-    // Listen for auth changes
+    // Listen for auth changes (fires on init + login/logout)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
+        if (!mounted) return;
         if (session?.user) {
           setSupabaseUser(session.user);
           await loadUserProfile(session.user.id);
         } else {
           setSupabaseUser(null);
           setUser(null);
+          setLoading(false);
         }
-        setLoading(false);
       }
     );
 
+    // Safety timeout: if auth takes more than 3s, stop loading and show login
+    const timeout = setTimeout(() => {
+      if (mounted) setLoading(false);
+    }, 3000);
+
     return () => {
+      mounted = false;
       subscription.unsubscribe();
       clearTimeout(timeout);
     };
