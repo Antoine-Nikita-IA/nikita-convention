@@ -44,7 +44,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else {
         setLoading(false);
       }
+    }).catch(() => {
+      // Supabase connection failed — fall back gracefully
+      setLoading(false);
     });
+
+    // Safety timeout: if auth takes more than 5s, stop loading
+    const timeout = setTimeout(() => setLoading(false), 5000);
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -60,7 +66,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     );
 
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(timeout);
+    };
   }, []);
 
   async function loadUserProfile(userId: string) {
