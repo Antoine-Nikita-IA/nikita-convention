@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -46,7 +46,10 @@ export function LoginPage() {
           {error && <p className="text-sm text-red-600 text-center">{error}</p>}
           <Button type="submit" loading={loading} className="w-full" icon={<LogIn size={16} />}>Se connecter</Button>
         </form>
-        <p className="text-xs text-gray-400 text-center mt-4">NIKITA — Organisme de formation certifié Qualiopi</p>
+        <p className="text-sm text-center mt-4">
+          <Link to="/register" className="text-nikita-pink font-medium hover:underline">Créer un compte</Link>
+        </p>
+        <p className="text-xs text-gray-400 text-center mt-2">NIKITA — Organisme de formation certifié Qualiopi</p>
       </div>
     </div>
   );

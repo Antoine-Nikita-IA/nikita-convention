@@ -24,6 +24,8 @@ import type {
   SuiviEtape,
   SessionStatus,
   Convention,
+  UserProfile,
+  UserRole,
 } from '@/types/database';
 import { generateConventionNumero, calculateTTC, calculateTVA } from './utils';
 
@@ -692,6 +694,115 @@ const supabaseService = {
     return data || [];
   },
 
+  // ---------- USER MANAGEMENT ----------
+  async getUsers(): Promise<UserProfile[]> {
+    const { data } = await supabase
+      .from('user_profiles')
+      .select('*')
+      .order('created_at', { ascending: false });
+    return (data || []).map((u: Record<string, unknown>) => ({
+      id: u.id as string,
+      user_id: u.user_id as string,
+      organisme_id: (u.organisme_id as string) || '',
+      email: u.email as string,
+      first_name: (u.first_name as string) || '',
+      last_name: (u.last_name as string) || '',
+      role: (u.role as UserRole) || 'user',
+      is_active: (u.is_active as boolean) ?? true,
+      is_validated: (u.is_validated as boolean) ?? false,
+      created_at: u.created_at as string | undefined,
+    }));
+  },
+
+  async updateUser(id: string, data: Partial<UserProfile>): Promise<UserProfile | null> {
+    const { id: _id, user_id: _uid, email: _email, created_at: _ca, ...updateData } = data;
+    void _id; void _uid; void _email; void _ca;
+    const { data: updated, error } = await supabase
+      .from('user_profiles')
+      .update(updateData)
+      .eq('id', id)
+      .select()
+      .single();
+    if (error || !updated) return null;
+    return updated as unknown as UserProfile;
+  },
+
+  async validateUser(id: string, role: UserRole): Promise<boolean> {
+    const { error } = await supabase
+      .from('user_profiles')
+      .update({ is_validated: true, role, is_active: true })
+      .eq('id', id);
+    return !error;
+  },
+
+  async deactivateUser(id: string): Promise<boolean> {
+    const { error } = await supabase
+      .from('user_profiles')
+      .update({ is_active: false })
+      .eq('id', id);
+    return !error;
+  },
+
+  async getClientsByApporteurId(apporteurId: string): Promise<Client[]> {
+    const { data } = await supabase
+      .from('clients')
+      .select('*')
+      .eq('apporteur_id', apporteurId)
+      .order('submitted_at', { ascending: false });
+    return data || [];
+  },
+
+  async assignClientToApporteur(clientId: string, apporteurId: string): Promise<boolean> {
+    const { error } = await supabase
+      .from('clients')
+      .update({ apporteur_id: apporteurId })
+      .eq('id', clientId);
+    return !error;
+  },
+
+  async getSessionsByApporteurId(apporteurId: string): Promise<Session[]> {
+    // Get clients for this apporteur, then get their sessions
+    const { data: clients } = await supabase
+      .from('clients')
+      .select('session_id')
+      .eq('apporteur_id', apporteurId);
+    if (!clients || clients.length === 0) return [];
+
+    const sessionIds = clients.map((c: { session_id: string }) => c.session_id);
+    const { data } = await supabase
+      .from('sessions')
+      .select('*, formation:formations(*), client:clients(*)')
+      .in('id', sessionIds)
+      .order('created_at', { ascending: false });
+    return (data || []).map(mapSession);
+  },
+
+  async registerUser(email: string, password: string, firstName: string, lastName: string): Promise<{ success: boolean; error?: string }> {
+    // Sign up via Supabase Auth
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { first_name: firstName, last_name: lastName } },
+    });
+    if (error) return { success: false, error: error.message };
+    if (!data.user) return { success: false, error: 'Erreur lors de la création du compte' };
+
+    // Create user profile (unvalidated)
+    const { error: profileError } = await supabase.from('user_profiles').insert({
+      id: data.user.id,
+      user_id: data.user.id,
+      email,
+      first_name: firstName,
+      last_name: lastName,
+      role: 'user',
+      is_active: false,
+      is_validated: false,
+    });
+    if (profileError) return { success: false, error: profileError.message };
+
+    return { success: true };
+  },
+
   // ---------- HELPERS ----------
   getInscriptionUrl(token: string): string {
     return `${window.location.origin}/inscription/${token}`;
@@ -891,6 +1002,21 @@ const mockService = {
   async getDocumentsByFormationId(formationId: string): Promise<DocumentFormation[]> {
     return delay(mockDocuments.filter((d) => d.formation_id === formationId || d.formation_id === null));
   },
+  // ---------- USER MANAGEMENT (mock) ----------
+  async getUsers(): Promise<UserProfile[]> {
+    return delay([
+      { id: 'u-001', user_id: 'auth-001', organisme_id: 'org-001', email: 'antoine@agencenikita.com', first_name: 'Antoine', last_name: 'Admin', role: 'admin' as UserRole, is_active: true, is_validated: true },
+      { id: 'u-002', user_id: 'auth-002', organisme_id: 'org-001', email: 'marie@example.com', first_name: 'Marie', last_name: 'Dupont', role: 'apporteur_affaire' as UserRole, is_active: true, is_validated: true },
+      { id: 'u-003', user_id: 'auth-003', organisme_id: 'org-001', email: 'jean@example.com', first_name: 'Jean', last_name: 'Martin', role: 'user' as UserRole, is_active: false, is_validated: false },
+    ]);
+  },
+  async updateUser(_id: string, _data: Partial<UserProfile>): Promise<UserProfile | null> { return delay(null); },
+  async validateUser(_id: string, _role: UserRole): Promise<boolean> { return delay(true); },
+  async deactivateUser(_id: string): Promise<boolean> { return delay(true); },
+  async getClientsByApporteurId(_apporteurId: string): Promise<Client[]> { return delay([]); },
+  async assignClientToApporteur(_clientId: string, _apporteurId: string): Promise<boolean> { return delay(true); },
+  async getSessionsByApporteurId(_apporteurId: string): Promise<Session[]> { return delay([]); },
+  async registerUser(_email: string, _password: string, _firstName: string, _lastName: string): Promise<{ success: boolean; error?: string }> { return delay({ success: true }); },
   getInscriptionUrl(token: string): string { return `${window.location.origin}/inscription/${token}`; },
   getConventionUrl(token: string): string { return `${window.location.origin}/conventions/client/${token}`; },
   getSuiviUrl(token: string): string { return `${window.location.origin}/suivi/${token}`; },

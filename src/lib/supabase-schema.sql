@@ -52,7 +52,8 @@ CREATE TYPE document_type AS ENUM (
 -- User role type
 CREATE TYPE user_role AS ENUM (
   'admin',
-  'user'
+  'user',
+  'apporteur_affaire'
 );
 
 -- ============================================================================
@@ -165,6 +166,7 @@ CREATE TABLE IF NOT EXISTS clients (
   recueil_besoins TEXT,
   besoins_specifiques TEXT,
   situation_handicap TEXT,
+  apporteur_id UUID REFERENCES user_profiles(id) ON DELETE SET NULL,
   submitted_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
@@ -309,6 +311,7 @@ CREATE TABLE IF NOT EXISTS user_profiles (
   last_name VARCHAR(255),
   role user_role DEFAULT 'user',
   is_active BOOLEAN DEFAULT TRUE,
+  is_validated BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

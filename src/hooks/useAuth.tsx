@@ -25,6 +25,7 @@ const MOCK_USER: UserProfile = {
   last_name: 'Admin',
   role: 'admin',
   is_active: true,
+  is_validated: true,
 };
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -85,6 +86,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           last_name: supaUser?.user_metadata?.last_name || '',
           role: 'admin',
           is_active: true,
+          is_validated: true,
         };
         setUser(profile);
       } else {
@@ -97,6 +99,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           last_name: data.last_name || '',
           role: data.role || 'user',
           is_active: data.is_active ?? true,
+          is_validated: data.is_validated ?? false,
         });
       }
     } catch {

@@ -1,21 +1,35 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
-import { LayoutDashboard, FileText, GraduationCap, Users, Settings, Menu, X, LogOut } from 'lucide-react';
+import { LayoutDashboard, FileText, GraduationCap, Users, Settings, Menu, X, LogOut, UserCog } from 'lucide-react';
+import { ROLE_LABELS } from '@/types/database';
 
-const NAV_ITEMS = [
+interface NavItem {
+  to: string;
+  icon: typeof LayoutDashboard;
+  label: string;
+  roles?: string[]; // undefined = visible par tous
+}
+
+const ALL_NAV_ITEMS: NavItem[] = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/sessions', icon: FileText, label: 'Sessions' },
-  { to: '/formations', icon: GraduationCap, label: 'Formations' },
+  { to: '/formations', icon: GraduationCap, label: 'Formations', roles: ['admin'] },
   { to: '/clients', icon: Users, label: 'Clients' },
-  { to: '/settings', icon: Settings, label: 'Paramètres' },
+  { to: '/utilisateurs', icon: UserCog, label: 'Utilisateurs', roles: ['admin'] },
+  { to: '/settings', icon: Settings, label: 'Paramètres', roles: ['admin'] },
 ];
 
 export function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+
+  const navItems = useMemo(() => {
+    const role = user?.role || 'user';
+    return ALL_NAV_ITEMS.filter((item) => !item.roles || item.roles.includes(role));
+  }, [user?.role]);
 
   function handleLogout() { logout(); navigate('/login'); }
 
@@ -37,7 +51,7 @@ export function Layout() {
         </div>
 
         <nav className="flex-1 py-4 px-3 space-y-1">
-          {NAV_ITEMS.map(({ to, icon: Icon, label }) => (
+          {navItems.map(({ to, icon: Icon, label }) => (
             <NavLink key={to} to={to} end={to === '/'} onClick={() => setSidebarOpen(false)}
               className={({ isActive }) => cn(
                 'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors',
@@ -56,7 +70,7 @@ export function Layout() {
             </div>
             <div className="flex-1 min-w-0">
               <div className="text-sm font-medium truncate">{user?.first_name} {user?.last_name}</div>
-              <div className="text-[10px] text-gray-400 truncate">{user?.email}</div>
+              <div className="text-[10px] text-gray-400 truncate">{user?.role ? ROLE_LABELS[user.role] : user?.email}</div>
             </div>
             <button onClick={handleLogout} className="p-1.5 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white transition-colors" title="Déconnexion">
               <LogOut size={16} />

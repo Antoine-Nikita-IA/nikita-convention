@@ -34,7 +34,7 @@ export interface DocumentFormation {
   created_at: string;
 }
 
-export type UserRole = 'admin' | 'user';
+export type UserRole = 'admin' | 'user' | 'apporteur_affaire';
 
 export interface Organisme {
   id: string;
@@ -91,6 +91,7 @@ export interface Client {
   opco_financement: boolean;
   opco_nom: string | null;
   recueil_besoins: string | null;
+  apporteur_id?: string | null;
   submitted_at: string;
 }
 
@@ -191,7 +192,15 @@ export interface UserProfile {
   last_name: string;
   role: UserRole;
   is_active: boolean;
+  is_validated: boolean;
+  created_at?: string;
 }
+
+export const ROLE_LABELS: Record<UserRole, string> = {
+  admin: 'Administrateur',
+  user: 'Utilisateur',
+  apporteur_affaire: "Apporteur d'affaire",
+};
 
 // Constants
 export const STATUS_LABELS: Record<SessionStatus, string> = {
