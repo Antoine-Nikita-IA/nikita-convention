@@ -15,12 +15,21 @@ export function LoginPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!email || !password) { setError('Veuillez remplir tous les champs'); return; }
     setError('');
     setLoading(true);
-    const ok = await login(email, password);
-    setLoading(false);
-    if (ok) navigate('/');
-    else setError('Identifiants invalides');
+    try {
+      const ok = await Promise.race([
+        login(email, password),
+        new Promise<false>((resolve) => setTimeout(() => resolve(false), 10000)),
+      ]);
+      setLoading(false);
+      if (ok) navigate('/');
+      else setError('Email ou mot de passe incorrect');
+    } catch {
+      setLoading(false);
+      setError('Erreur de connexion au serveur');
+    }
   }
 
   return (

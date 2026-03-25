@@ -536,6 +536,11 @@ const supabaseService = {
     return updated;
   },
 
+  async deleteFormation(id: string): Promise<boolean> {
+    const { error } = await supabase.from('formations').delete().eq('id', id);
+    return !error;
+  },
+
   // ---------- CLIENTS ----------
   async getClients(): Promise<Client[]> {
     const { data } = await supabase.from('clients').select('*').order('submitted_at', { ascending: false });
@@ -841,6 +846,11 @@ const mockService = {
     const f = mockFormations.find((f) => f.id === id);
     if (f) { Object.assign(f, data); return delay(f); }
     return delay(null);
+  },
+  async deleteFormation(id: string): Promise<boolean> {
+    const idx = mockFormations.findIndex((f) => f.id === id);
+    if (idx >= 0) { mockFormations.splice(idx, 1); return delay(true); }
+    return delay(false);
   },
   async getClients(): Promise<Client[]> { return delay([...mockClients]); },
   async getClientBySessionId(sessionId: string): Promise<Client | null> { return delay(mockClients.find((c) => c.session_id === sessionId) || null); },

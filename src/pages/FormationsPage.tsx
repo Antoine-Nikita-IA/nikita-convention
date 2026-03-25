@@ -5,7 +5,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Input, Textarea, SelectField } from '@/components/ui/Input';
 import { dataService } from '@/lib/services';
 import { formatMoney, cn } from '@/lib/utils';
-import { Plus, Clock, Euro, MapPin, Loader2 } from 'lucide-react';
+import { Plus, Clock, Euro, MapPin, Loader2, Trash2, Edit3, ToggleLeft, ToggleRight } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Formation } from '@/types/database';
 
@@ -78,6 +78,27 @@ export function FormationsPage() {
     }
   }
 
+  async function handleDelete(f: Formation, e: React.MouseEvent) {
+    e.stopPropagation();
+    if (!confirm(`Supprimer "${f.intitule}" ?`)) return;
+    const ok = await dataService.deleteFormation(f.id);
+    if (ok) {
+      setFormations(formations.filter(x => x.id !== f.id));
+      toast.success('Formation supprimée');
+    } else {
+      toast.error('Impossible de supprimer (formation liée à des sessions ?)');
+    }
+  }
+
+  async function handleToggleActif(f: Formation, e: React.MouseEvent) {
+    e.stopPropagation();
+    const updated = await dataService.updateFormation(f.id, { actif: !f.actif });
+    if (updated) {
+      setFormations(formations.map(x => x.id === f.id ? updated : x));
+      toast.success(updated.actif ? 'Formation activée' : 'Formation désactivée');
+    }
+  }
+
   if (loading) {
     return <div className="flex items-center justify-center h-64"><Loader2 className="animate-spin text-nikita-pink" size={32} /></div>;
   }
@@ -96,14 +117,22 @@ export function FormationsPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {formations.map((f) => (
-            <Card key={f.id} onClick={() => openEdit(f)} className="p-5 hover:border-nikita-pink/30">
+            <Card key={f.id} className={cn('p-5 hover:border-nikita-pink/30 transition-all', !f.actif && 'opacity-60')}>
               <div className="flex items-start justify-between mb-3">
-                <h3 className="font-semibold text-gray-800 text-sm leading-tight">{f.intitule}</h3>
-                <span className={cn('px-2 py-0.5 text-[10px] font-medium rounded-full', f.actif ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500')}>
-                  {f.actif ? 'Actif' : 'Inactif'}
-                </span>
+                <h3 className="font-semibold text-gray-800 text-sm leading-tight flex-1 cursor-pointer" onClick={() => openEdit(f)}>{f.intitule}</h3>
+                <div className="flex items-center gap-1 ml-2 shrink-0">
+                  <button onClick={(e) => handleToggleActif(f, e)} className="p-1 rounded hover:bg-gray-100 transition-colors" title={f.actif ? 'Désactiver' : 'Activer'}>
+                    {f.actif ? <ToggleRight size={16} className="text-green-600" /> : <ToggleLeft size={16} className="text-gray-400" />}
+                  </button>
+                  <button onClick={() => openEdit(f)} className="p-1 rounded hover:bg-gray-100 transition-colors" title="Modifier">
+                    <Edit3 size={14} className="text-gray-400" />
+                  </button>
+                  <button onClick={(e) => handleDelete(f, e)} className="p-1 rounded hover:bg-red-50 transition-colors" title="Supprimer">
+                    <Trash2 size={14} className="text-gray-400 hover:text-red-500" />
+                  </button>
+                </div>
               </div>
-              <div className="space-y-2 text-xs text-gray-500">
+              <div className="space-y-2 text-xs text-gray-500 cursor-pointer" onClick={() => openEdit(f)}>
                 <div className="flex items-center gap-2"><Clock size={13} />{f.duree_heures}h de formation</div>
                 <div className="flex items-center gap-2"><Euro size={13} />{formatMoney(f.tarif_ht)} HT / personne</div>
                 <div className="flex items-center gap-2"><MapPin size={13} />{f.modalite}</div>
