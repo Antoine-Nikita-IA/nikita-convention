@@ -5,18 +5,23 @@ import { StatusBadge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { formatDate, formatMoney, getClientFromSession } from '@/lib/utils';
 import { dataService } from '@/lib/services';
-import { FolderOpen, FileCheck, PenTool, Euro, Clock, Loader2, Plus, AlertTriangle, TrendingUp, ArrowRight } from 'lucide-react';
+import { FolderOpen, FileCheck, PenTool, Euro, Clock, Loader2, Plus, AlertTriangle, TrendingUp, ArrowRight, UserCheck } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
-import type { Session } from '@/types/database';
+import type { Session, UserProfile } from '@/types/database';
 
 export function DashboardPage() {
   const navigate = useNavigate();
   const [sessions, setSessions] = useState<Session[]>([]);
+  const [pendingUsers, setPendingUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    dataService.getSessions().then((data) => {
-      setSessions(data);
+    Promise.all([
+      dataService.getSessions(),
+      dataService.getUsers().catch(() => [] as UserProfile[]),
+    ]).then(([sessData, usersData]) => {
+      setSessions(sessData);
+      setPendingUsers(usersData.filter((u) => !u.is_validated));
       setLoading(false);
     }).catch(() => setLoading(false));
   }, []);
@@ -34,6 +39,13 @@ export function DashboardPage() {
   const actionsRequises = sessions.filter((s) =>
     s.status === 'formulaire_recu' || s.status === 'convention_generee'
   ).slice(0, 5);
+
+  // Nouvelles demandes (dernières 48h)
+  const now = Date.now();
+  const recentDemandes = sessions.filter((s) => {
+    const created = new Date(s.created_at).getTime();
+    return (now - created) < 48 * 60 * 60 * 1000 && s.status === 'formulaire_recu';
+  });
 
   const caParMois: Record<string, number> = {};
   sessions.filter((s) => s.status === 'signe' && s.montant_ht).forEach((s) => {
@@ -56,6 +68,32 @@ export function DashboardPage() {
         <h1 className="text-2xl font-bold text-gray-800">Dashboard</h1>
         <Button onClick={() => navigate('/sessions')} icon={<Plus size={16} />}>Nouvelle session</Button>
       </div>
+
+      {/* Alertes */}
+      {(pendingUsers.length > 0 || recentDemandes.length > 0) && (
+        <div className="flex flex-wrap gap-3">
+          {pendingUsers.length > 0 && (
+            <button
+              onClick={() => navigate('/utilisateurs')}
+              className="flex items-center gap-2 px-4 py-2.5 bg-yellow-50 border border-yellow-200 rounded-lg hover:bg-yellow-100 transition-colors"
+            >
+              <UserCheck size={16} className="text-yellow-600" />
+              <span className="text-sm font-medium text-yellow-700">
+                {pendingUsers.length} utilisateur{pendingUsers.length > 1 ? 's' : ''} en attente de validation
+              </span>
+              <ArrowRight size={14} className="text-yellow-500" />
+            </button>
+          )}
+          {recentDemandes.length > 0 && (
+            <div className="flex items-center gap-2 px-4 py-2.5 bg-blue-50 border border-blue-200 rounded-lg">
+              <FolderOpen size={16} className="text-blue-600" />
+              <span className="text-sm font-medium text-blue-700">
+                {recentDemandes.length} nouvelle{recentDemandes.length > 1 ? 's' : ''} demande{recentDemandes.length > 1 ? 's' : ''} (48h)
+              </span>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         <KPICard label="Total sessions" value={totalSessions} icon={<FolderOpen size={24} />} />

@@ -693,6 +693,46 @@ CREATE POLICY user_profiles_all_service_role ON user_profiles FOR ALL
   WITH CHECK (auth.role() = 'service_role');
 
 -- ============================================================================
+-- 4.10 Role-Based Policies (Admin & Apporteur d'affaire)
+-- ============================================================================
+
+-- Admin can view all user_profiles
+CREATE POLICY user_profiles_select_admin ON user_profiles FOR SELECT TO authenticated
+  USING (EXISTS (SELECT 1 FROM user_profiles WHERE user_id = auth.uid() AND role = 'admin'));
+
+-- Admin can update all user_profiles (validate, change role, deactivate)
+CREATE POLICY user_profiles_update_admin ON user_profiles FOR UPDATE TO authenticated
+  USING (EXISTS (SELECT 1 FROM user_profiles WHERE user_id = auth.uid() AND role = 'admin'));
+
+-- Allow authenticated users to insert their own profile (registration)
+CREATE POLICY user_profiles_insert_self ON user_profiles FOR INSERT TO authenticated
+  WITH CHECK (user_id = auth.uid());
+
+-- Admin can view all clients
+CREATE POLICY clients_select_admin ON clients FOR SELECT TO authenticated
+  USING (EXISTS (SELECT 1 FROM user_profiles WHERE user_id = auth.uid() AND role = 'admin'));
+
+-- Admin can update all clients (apporteur assignment)
+CREATE POLICY clients_update_admin ON clients FOR UPDATE TO authenticated
+  USING (EXISTS (SELECT 1 FROM user_profiles WHERE user_id = auth.uid() AND role = 'admin'));
+
+-- Apporteurs can view clients assigned to them
+CREATE POLICY clients_select_apporteur ON clients FOR SELECT TO authenticated
+  USING (apporteur_id IN (SELECT id FROM user_profiles WHERE user_id = auth.uid() AND role = 'apporteur_affaire'));
+
+-- Apporteurs can view sessions linked to their clients
+CREATE POLICY sessions_select_apporteur ON sessions FOR SELECT TO authenticated
+  USING (id IN (SELECT c.session_id FROM clients c JOIN user_profiles up ON up.id = c.apporteur_id WHERE up.user_id = auth.uid() AND up.role = 'apporteur_affaire'));
+
+-- Apporteurs can view stagiaires of their sessions
+CREATE POLICY stagiaires_select_apporteur ON stagiaires FOR SELECT TO authenticated
+  USING (session_id IN (SELECT c.session_id FROM clients c JOIN user_profiles up ON up.id = c.apporteur_id WHERE up.user_id = auth.uid() AND up.role = 'apporteur_affaire'));
+
+-- Apporteurs can view email logs of their sessions
+CREATE POLICY email_logs_select_apporteur ON email_logs FOR SELECT TO authenticated
+  USING (session_id IN (SELECT c.session_id FROM clients c JOIN user_profiles up ON up.id = c.apporteur_id WHERE up.user_id = auth.uid() AND up.role = 'apporteur_affaire'));
+
+-- ============================================================================
 -- 5. VIEWS
 -- ============================================================================
 

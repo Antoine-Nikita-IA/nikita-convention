@@ -16,10 +16,13 @@ import {
   ArrowLeft, Send, RefreshCw, FileDown, UserPlus, CheckCircle, XCircle,
   AlertCircle, Link2, Copy, Eye, Trash2, ExternalLink, Clock, History, Loader2,
 } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
 
 export function SessionDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const isApporteur = user?.role === 'apporteur_affaire';
 
   // Data state
   const [session, setSession] = useState<Session | null>(null);
@@ -251,12 +254,14 @@ export function SessionDetailPage() {
       <WorkflowBar currentStatus={currentStatus} />
 
       {/* Quick links */}
-      <div className="flex items-center gap-2 flex-wrap">
-        <Button variant="ghost" size="sm" icon={<Link2 size={14} />} onClick={() => copyLink('inscription')}>Lien inscription</Button>
-        <Button variant="ghost" size="sm" icon={<Link2 size={14} />} onClick={() => copyLink('convention')}>Lien convention</Button>
-        <Button variant="ghost" size="sm" icon={<Link2 size={14} />} onClick={() => copyLink('suivi')}>Lien suivi</Button>
-        <Button variant="ghost" size="sm" icon={<History size={14} />} onClick={loadSessionLogs}>Historique</Button>
-      </div>
+      {!isApporteur && (
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button variant="ghost" size="sm" icon={<Link2 size={14} />} onClick={() => copyLink('inscription')}>Lien inscription</Button>
+          <Button variant="ghost" size="sm" icon={<Link2 size={14} />} onClick={() => copyLink('convention')}>Lien convention</Button>
+          <Button variant="ghost" size="sm" icon={<Link2 size={14} />} onClick={() => copyLink('suivi')}>Lien suivi</Button>
+          <Button variant="ghost" size="sm" icon={<History size={14} />} onClick={loadSessionLogs}>Historique</Button>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left column */}
@@ -280,10 +285,12 @@ export function SessionDetailPage() {
               ) : (
                 <div className="text-center py-4">
                   <p className="text-sm text-gray-400 mb-3">Aucun client rattaché</p>
-                  <div className="flex items-center justify-center gap-2">
-                    <Button variant="outline" size="sm" icon={<Send size={14} />} onClick={() => setShowSendLink(true)}>Envoyer le lien d'inscription</Button>
-                    <Button variant="ghost" size="sm" icon={<Copy size={14} />} onClick={() => copyLink('inscription')}>Copier le lien</Button>
-                  </div>
+                  {!isApporteur && (
+                    <div className="flex items-center justify-center gap-2">
+                      <Button variant="outline" size="sm" icon={<Send size={14} />} onClick={() => setShowSendLink(true)}>Envoyer le lien d'inscription</Button>
+                      <Button variant="ghost" size="sm" icon={<Copy size={14} />} onClick={() => copyLink('inscription')}>Copier le lien</Button>
+                    </div>
+                  )}
                 </div>
               )}
             </CardContent>
@@ -312,7 +319,7 @@ export function SessionDetailPage() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <h2 className="text-sm font-semibold text-gray-700">Stagiaires ({stagiaires.length}{client?.nb_participants ? ` / ${client.nb_participants}` : ''})</h2>
-                <Button variant="ghost" size="sm" icon={<UserPlus size={14} />} onClick={() => setShowAddStagiaire(true)}>Ajouter</Button>
+                {!isApporteur && <Button variant="ghost" size="sm" icon={<UserPlus size={14} />} onClick={() => setShowAddStagiaire(true)}>Ajouter</Button>}
               </div>
             </CardHeader>
             <CardContent>
@@ -323,7 +330,7 @@ export function SessionDetailPage() {
                       <div><p className="text-sm font-medium">{s.prenom} {s.nom}</p><p className="text-xs text-gray-500">{s.fonction}</p></div>
                       <div className="flex items-center gap-2">
                         <p className="text-xs text-gray-500">{s.email}</p>
-                        <button onClick={() => handleRemoveStagiaire(s.id)} className="p-1 rounded hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors"><Trash2 size={14} /></button>
+                        {!isApporteur && <button onClick={() => handleRemoveStagiaire(s.id)} className="p-1 rounded hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors"><Trash2 size={14} /></button>}
                       </div>
                     </div>
                   ))}
@@ -344,54 +351,73 @@ export function SessionDetailPage() {
         <div className="space-y-6">
           {/* Actions */}
           <Card>
-            <CardHeader><h2 className="text-sm font-semibold text-gray-700">Actions</h2></CardHeader>
+            <CardHeader><h2 className="text-sm font-semibold text-gray-700">{isApporteur ? 'Statut' : 'Actions'}</h2></CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                {currentStatus === 'en_attente' && (
-                  <div className="space-y-2">
-                    <Button variant="outline" icon={<Send size={16} />} className="w-full" onClick={() => setShowSendLink(true)}>Envoyer lien inscription</Button>
-                    <Button variant="ghost" size="sm" icon={<Copy size={14} />} className="w-full" onClick={() => copyLink('inscription')}>Copier le lien</Button>
-                    <p className="text-xs text-gray-400 text-center pt-1">En attente du formulaire client</p>
-                  </div>
-                )}
-                {currentStatus === 'formulaire_recu' && (
-                  <div className="space-y-2">
-                    <Button onClick={() => { setValidateForm({ dates_formation: session.dates_formation || '', lieu: session.lieu || '', ville: session.ville || '', formateurs: session.formateurs || '', montant_ht: String(session.montant_ht || '') }); setShowValidate(true); }} icon={<CheckCircle size={16} />} className="w-full">Valider la demande</Button>
-                    <p className="text-xs text-gray-400 text-center pt-1">Vérifiez les infos client puis validez</p>
-                  </div>
-                )}
-                {currentStatus === 'valide' && (
-                  <div className="space-y-2">
-                    <Button onClick={handleGenerateConvention} loading={actionLoading} icon={<FileDown size={16} />} className="w-full">Générer la convention</Button>
-                    <p className="text-xs text-gray-400 text-center pt-1">Calcul automatique des montants</p>
-                  </div>
-                )}
-                {currentStatus === 'convention_generee' && (
-                  <div className="space-y-2">
-                    <Button onClick={() => setShowEmailPreview('convention_envoi')} variant="outline" icon={<Eye size={16} />} className="w-full" size="sm">Aperçu de l'email</Button>
-                    <Button onClick={handleSendConvention} loading={actionLoading} icon={<Send size={16} />} className="w-full">Envoyer la convention</Button>
-                    <Button variant="ghost" size="sm" icon={<ExternalLink size={14} />} className="w-full" onClick={() => copyLink('convention')}>Copier lien convention</Button>
-                    {session.convention_numero && <p className="text-xs text-gray-500 text-center font-mono">{session.convention_numero}</p>}
-                  </div>
-                )}
-                {currentStatus === 'envoye' && (
-                  <div className="space-y-2">
-                    <div className="bg-orange-50 text-orange-700 text-sm p-3 rounded-lg text-center"><Clock size={16} className="inline mr-1 mb-0.5" />En attente de signature client</div>
-                    <Button variant="outline" icon={<RefreshCw size={16} />} className="w-full" onClick={() => handleRelance('relance_convention')} loading={actionLoading}>Relancer le client</Button>
-                    <Button variant="ghost" size="sm" icon={<Send size={14} />} className="w-full" onClick={handleSendConvention}>Renvoyer la convention</Button>
-                    <Button variant="ghost" size="sm" icon={<ExternalLink size={14} />} className="w-full" onClick={() => copyLink('convention')}>Copier lien signature</Button>
-                  </div>
-                )}
-                {currentStatus === 'signe' && (
-                  <div className="space-y-2">
-                    <div className="bg-green-50 text-green-700 text-sm p-3 rounded-lg text-center font-medium"><CheckCircle size={16} className="inline mr-1 mb-0.5" />Convention signée</div>
-                    {client?.opco_financement && <div className="bg-blue-50 text-blue-700 text-xs p-3 rounded-lg"><p className="font-medium">OPCO : {client.opco_nom || 'Oui'}</p><p className="mt-1">Prochaine étape : préparer le dossier OPCO</p></div>}
-                    <Button variant="ghost" size="sm" icon={<ExternalLink size={14} />} className="w-full" onClick={() => copyLink('suivi')}>Copier lien suivi client</Button>
-                  </div>
-                )}
-                {currentStatus === 'annule' && <div className="bg-red-50 text-red-700 text-sm p-3 rounded-lg text-center font-medium"><XCircle size={16} className="inline mr-1 mb-0.5" />Session annulée</div>}
-                {nextStatuses.includes('annule') && <Button variant="danger" size="sm" onClick={handleCancel} icon={<XCircle size={14} />} className="w-full mt-4">Annuler la session</Button>}
-              </div>
+              {isApporteur ? (
+                /* Apporteur: read-only status display */
+                <div className="space-y-3">
+                  {currentStatus === 'en_attente' && <div className="bg-gray-50 text-gray-600 text-sm p-3 rounded-lg text-center"><Clock size={16} className="inline mr-1 mb-0.5" />En attente du formulaire client</div>}
+                  {currentStatus === 'formulaire_recu' && <div className="bg-blue-50 text-blue-700 text-sm p-3 rounded-lg text-center"><AlertCircle size={16} className="inline mr-1 mb-0.5" />Formulaire reçu — en cours de traitement</div>}
+                  {currentStatus === 'valide' && <div className="bg-blue-50 text-blue-700 text-sm p-3 rounded-lg text-center"><CheckCircle size={16} className="inline mr-1 mb-0.5" />Demande validée — convention en préparation</div>}
+                  {currentStatus === 'convention_generee' && <div className="bg-indigo-50 text-indigo-700 text-sm p-3 rounded-lg text-center"><FileDown size={16} className="inline mr-1 mb-0.5" />Convention générée{session.convention_numero && <span className="block text-xs mt-1 font-mono">{session.convention_numero}</span>}</div>}
+                  {currentStatus === 'envoye' && <div className="bg-orange-50 text-orange-700 text-sm p-3 rounded-lg text-center"><Clock size={16} className="inline mr-1 mb-0.5" />Convention envoyée — en attente de signature</div>}
+                  {currentStatus === 'signe' && (
+                    <div className="space-y-2">
+                      <div className="bg-green-50 text-green-700 text-sm p-3 rounded-lg text-center font-medium"><CheckCircle size={16} className="inline mr-1 mb-0.5" />Convention signée</div>
+                      {client?.opco_financement && <div className="bg-blue-50 text-blue-700 text-xs p-3 rounded-lg"><p className="font-medium">OPCO : {client.opco_nom || 'Oui'}</p></div>}
+                    </div>
+                  )}
+                  {currentStatus === 'annule' && <div className="bg-red-50 text-red-700 text-sm p-3 rounded-lg text-center font-medium"><XCircle size={16} className="inline mr-1 mb-0.5" />Session annulée</div>}
+                </div>
+              ) : (
+                /* Admin/User: full action panel */
+                <div className="space-y-3">
+                  {currentStatus === 'en_attente' && (
+                    <div className="space-y-2">
+                      <Button variant="outline" icon={<Send size={16} />} className="w-full" onClick={() => setShowSendLink(true)}>Envoyer lien inscription</Button>
+                      <Button variant="ghost" size="sm" icon={<Copy size={14} />} className="w-full" onClick={() => copyLink('inscription')}>Copier le lien</Button>
+                      <p className="text-xs text-gray-400 text-center pt-1">En attente du formulaire client</p>
+                    </div>
+                  )}
+                  {currentStatus === 'formulaire_recu' && (
+                    <div className="space-y-2">
+                      <Button onClick={() => { setValidateForm({ dates_formation: session.dates_formation || '', lieu: session.lieu || '', ville: session.ville || '', formateurs: session.formateurs || '', montant_ht: String(session.montant_ht || '') }); setShowValidate(true); }} icon={<CheckCircle size={16} />} className="w-full">Valider la demande</Button>
+                      <p className="text-xs text-gray-400 text-center pt-1">Vérifiez les infos client puis validez</p>
+                    </div>
+                  )}
+                  {currentStatus === 'valide' && (
+                    <div className="space-y-2">
+                      <Button onClick={handleGenerateConvention} loading={actionLoading} icon={<FileDown size={16} />} className="w-full">Générer la convention</Button>
+                      <p className="text-xs text-gray-400 text-center pt-1">Calcul automatique des montants</p>
+                    </div>
+                  )}
+                  {currentStatus === 'convention_generee' && (
+                    <div className="space-y-2">
+                      <Button onClick={() => setShowEmailPreview('convention_envoi')} variant="outline" icon={<Eye size={16} />} className="w-full" size="sm">Aperçu de l'email</Button>
+                      <Button onClick={handleSendConvention} loading={actionLoading} icon={<Send size={16} />} className="w-full">Envoyer la convention</Button>
+                      <Button variant="ghost" size="sm" icon={<ExternalLink size={14} />} className="w-full" onClick={() => copyLink('convention')}>Copier lien convention</Button>
+                      {session.convention_numero && <p className="text-xs text-gray-500 text-center font-mono">{session.convention_numero}</p>}
+                    </div>
+                  )}
+                  {currentStatus === 'envoye' && (
+                    <div className="space-y-2">
+                      <div className="bg-orange-50 text-orange-700 text-sm p-3 rounded-lg text-center"><Clock size={16} className="inline mr-1 mb-0.5" />En attente de signature client</div>
+                      <Button variant="outline" icon={<RefreshCw size={16} />} className="w-full" onClick={() => handleRelance('relance_convention')} loading={actionLoading}>Relancer le client</Button>
+                      <Button variant="ghost" size="sm" icon={<Send size={14} />} className="w-full" onClick={handleSendConvention}>Renvoyer la convention</Button>
+                      <Button variant="ghost" size="sm" icon={<ExternalLink size={14} />} className="w-full" onClick={() => copyLink('convention')}>Copier lien signature</Button>
+                    </div>
+                  )}
+                  {currentStatus === 'signe' && (
+                    <div className="space-y-2">
+                      <div className="bg-green-50 text-green-700 text-sm p-3 rounded-lg text-center font-medium"><CheckCircle size={16} className="inline mr-1 mb-0.5" />Convention signée</div>
+                      {client?.opco_financement && <div className="bg-blue-50 text-blue-700 text-xs p-3 rounded-lg"><p className="font-medium">OPCO : {client.opco_nom || 'Oui'}</p><p className="mt-1">Prochaine étape : préparer le dossier OPCO</p></div>}
+                      <Button variant="ghost" size="sm" icon={<ExternalLink size={14} />} className="w-full" onClick={() => copyLink('suivi')}>Copier lien suivi client</Button>
+                    </div>
+                  )}
+                  {currentStatus === 'annule' && <div className="bg-red-50 text-red-700 text-sm p-3 rounded-lg text-center font-medium"><XCircle size={16} className="inline mr-1 mb-0.5" />Session annulée</div>}
+                  {nextStatuses.includes('annule') && <Button variant="danger" size="sm" onClick={handleCancel} icon={<XCircle size={14} />} className="w-full mt-4">Annuler la session</Button>}
+                </div>
+              )}
             </CardContent>
           </Card>
 

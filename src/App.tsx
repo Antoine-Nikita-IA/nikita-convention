@@ -19,7 +19,7 @@ import { SuiviClientPage } from '@/pages/SuiviClientPage';
 import { DemandeFormationPage } from '@/pages/DemandeFormationPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
+  const { user, loading, logout } = useAuth();
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-nikita-gray"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-nikita-pink" /></div>;
   if (!user) return <Navigate to="/login" replace />;
   // Block unvalidated users
@@ -34,8 +34,8 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
           Votre compte a bien été créé mais il est en attente de validation par un administrateur.
           Vous serez notifié dès que votre accès sera activé.
         </p>
-        <button onClick={() => { /* logout handled in context */ }} className="text-sm text-nikita-pink hover:underline">
-          Retour
+        <button onClick={() => { logout(); }} className="text-sm text-nikita-pink hover:underline">
+          Se déconnecter
         </button>
       </div>
     </div>

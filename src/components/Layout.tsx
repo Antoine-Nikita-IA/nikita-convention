@@ -1,15 +1,17 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 import { LayoutDashboard, FileText, GraduationCap, Users, Settings, Menu, X, LogOut, UserCog } from 'lucide-react';
 import { ROLE_LABELS } from '@/types/database';
+import { dataService } from '@/lib/services';
 
 interface NavItem {
   to: string;
   icon: typeof LayoutDashboard;
   label: string;
   roles?: string[]; // undefined = visible par tous
+  badgeKey?: string;
 }
 
 const ALL_NAV_ITEMS: NavItem[] = [
@@ -17,7 +19,7 @@ const ALL_NAV_ITEMS: NavItem[] = [
   { to: '/sessions', icon: FileText, label: 'Sessions' },
   { to: '/formations', icon: GraduationCap, label: 'Formations', roles: ['admin'] },
   { to: '/clients', icon: Users, label: 'Clients' },
-  { to: '/utilisateurs', icon: UserCog, label: 'Utilisateurs', roles: ['admin'] },
+  { to: '/utilisateurs', icon: UserCog, label: 'Utilisateurs', roles: ['admin'], badgeKey: 'pendingUsers' },
   { to: '/settings', icon: Settings, label: 'Paramètres', roles: ['admin'] },
 ];
 
@@ -25,11 +27,24 @@ export function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const [pendingUsersCount, setPendingUsersCount] = useState(0);
 
   const navItems = useMemo(() => {
     const role = user?.role || 'user';
     return ALL_NAV_ITEMS.filter((item) => !item.roles || item.roles.includes(role));
   }, [user?.role]);
+
+  // Load pending users count for admin badge
+  useEffect(() => {
+    if (user?.role !== 'admin') return;
+    dataService.getUsers().then((users) => {
+      setPendingUsersCount(users.filter((u) => !u.is_validated).length);
+    }).catch(() => {});
+  }, [user?.role]);
+
+  const badges: Record<string, number> = {
+    pendingUsers: pendingUsersCount,
+  };
 
   function handleLogout() { logout(); navigate('/login'); }
 
@@ -51,16 +66,25 @@ export function Layout() {
         </div>
 
         <nav className="flex-1 py-4 px-3 space-y-1">
-          {navItems.map(({ to, icon: Icon, label }) => (
-            <NavLink key={to} to={to} end={to === '/'} onClick={() => setSidebarOpen(false)}
-              className={({ isActive }) => cn(
-                'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors',
-                isActive ? 'bg-nikita-pink/20 text-white font-medium' : 'text-gray-400 hover:text-white hover:bg-white/5'
-              )}
-            >
-              <Icon size={18} />{label}
-            </NavLink>
-          ))}
+          {navItems.map(({ to, icon: Icon, label, badgeKey }) => {
+            const badgeCount = badgeKey ? badges[badgeKey] || 0 : 0;
+            return (
+              <NavLink key={to} to={to} end={to === '/'} onClick={() => setSidebarOpen(false)}
+                className={({ isActive }) => cn(
+                  'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors',
+                  isActive ? 'bg-nikita-pink/20 text-white font-medium' : 'text-gray-400 hover:text-white hover:bg-white/5'
+                )}
+              >
+                <Icon size={18} />
+                <span className="flex-1">{label}</span>
+                {badgeCount > 0 && (
+                  <span className="min-w-[20px] h-5 flex items-center justify-center px-1.5 text-[10px] font-bold bg-yellow-500 text-white rounded-full">
+                    {badgeCount}
+                  </span>
+                )}
+              </NavLink>
+            );
+          })}
         </nav>
 
         <div className="p-4 border-t border-white/10">
